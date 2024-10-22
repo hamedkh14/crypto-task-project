@@ -20,6 +20,33 @@ ChartJS.register(
   Legend
 );
 
+// نوع داده‌های Kline
+interface KlineData {
+  openTime: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  closeTime: number;
+  quoteAssetVolume: string;
+  numberOfTrades: number;
+  takerBuyBaseAssetVolume: string;
+  takerBuyQuoteAssetVolume: string;
+}
+
+// نوع داده‌های چارت
+interface ChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+    borderColor: string;
+    borderWidth: number;
+  }[];
+}
+
 const timeframes = [
   { label: '1 Minute', value: '1m' },
   { label: '5 Minutes', value: '5m' },
@@ -29,7 +56,7 @@ const timeframes = [
 ];
 
 const TradingChart: React.FC = () => {
-  const [chartData, setChartData] = useState<any>({
+  const [chartData, setChartData] = useState<ChartData>({
     labels: [],
     datasets: []
   });
@@ -37,33 +64,38 @@ const TradingChart: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchData = async () => {
-    const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${selectedTimeframe}`);
-    const data = await response.json();
+    try {
+      const response = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${selectedTimeframe}`
+      );
+      const data: KlineData[] = await response.json();
 
-    const labels = data.map((item: any) => new Date(item[0]).toLocaleTimeString());
-    const prices = data.map((item: any) => item[4]);
+      const labels = data.map((item) => new Date(item.openTime).toLocaleTimeString());
+      const prices = data.map((item) => parseFloat(item.close)); // تبدیل قیمت‌ها به عدد
 
-    setChartData({
-      labels,
-      datasets: [
-        {
-          label: `BTCUSDT Close Price (${selectedTimeframe})`,
-          data: prices,
-          backgroundColor: 'rgb(252, 213, 53)',
-          borderColor: 'rgb(252, 213, 53)',
-          borderWidth: 1,
-        },
-      ],
-    });
+      setChartData({
+        labels,
+        datasets: [
+          {
+            label: `BTCUSDT Close Price (${selectedTimeframe})`,
+            data: prices,
+            backgroundColor: 'rgb(252, 213, 53)',
+            borderColor: 'rgb(252, 213, 53)',
+            borderWidth: 1,
+          },
+        ],
+      });
 
-    setLastUpdated(new Date());
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
   };
 
   useEffect(() => {
     fetchData();
 
     const intervalId = setInterval(fetchData, 60000);
-
     return () => clearInterval(intervalId);
   }, [selectedTimeframe]);
 
